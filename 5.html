@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Numbers - الأرقام | Interactive Chart & Audio Sync</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Fredoka & Tajawal -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    :root {
+      --font-en: 'Fredoka', cursive, sans-serif;
+      --font-ar: 'Tajawal', sans-serif;
+    }
+
+    body {
+      font-family: var(--font-ar);
+      background-color: #f8fafc;
+      background-image: 
+        radial-gradient(#e2e8f0 1.2px, transparent 1.2px), 
+        radial-gradient(#fed7aa 1.2px, #f8fafc 1.2px);
+      background-size: 24px 24px;
+      background-position: 0 0, 12px 12px;
+      min-height: 100vh;
+      color: #1e293b;
+      user-select: none;
+    }
+
+    .font-english {
+      font-family: var(--font-en);
+    }
+
+    /* Red highlight on syllables as seen in poster */
+    .highlight-red {
+      color: #ef4444 !important;
+      font-weight: 800;
+    }
+
+    /* Interactive number row card */
+    .num-row-card {
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: pointer;
+      position: relative;
+    }
+    .num-row-card:hover {
+      transform: scale(1.03) translateY(-2px);
+      z-index: 10;
+      box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.12);
+    }
+    .num-row-card:active {
+      transform: scale(0.98);
+    }
+
+    /* Sound-to-Image Karaoke Glow */
+    .sync-card-active {
+      transform: scale(1.05) translateY(-3px) !important;
+      z-index: 20 !important;
+      background-color: #ffffff !important;
+      box-shadow: 0 0 0 4px #f59e0b, 0 16px 30px -4px rgba(245, 158, 11, 0.45) !important;
+      animation: pulseRowHalo 1.1s ease-in-out infinite alternate;
+    }
+
+    .sync-text-active {
+      color: #d97706 !important;
+      transform: scale(1.06);
+      text-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
+    }
+
+    @keyframes pulseRowHalo {
+      0% { box-shadow: 0 0 0 3px #f59e0b, 0 10px 20px -4px rgba(245, 158, 11, 0.35); }
+      100% { box-shadow: 0 0 0 7px #fbbf24, 0 18px 36px -4px rgba(245, 158, 11, 0.6); }
+    }
+
+    /* Vertical Banner text orientation for 1000 */
+    .vertical-banner-text {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      transform: rotate(180deg);
+    }
+
+    /* Floating math elements background */
+    .math-badge {
+      animation: floatSymbol 4s ease-in-out infinite alternate;
+    }
+    @keyframes floatSymbol {
+      0% { transform: translateY(0px) rotate(0deg); }
+      100% { transform: translateY(-8px) rotate(6deg); }
+    }
+
+    /* Live Equalizer Animation */
+    .eq-wave-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 2.5px;
+      height: 16px;
+    }
+    .eq-bar {
+      width: 3px;
+      border-radius: 9999px;
+      animation: eqBounce 0.65s ease-in-out infinite;
+    }
+    .eq-bar:nth-child(1) { height: 6px; background-color: #38bdf8; animation-delay: 0.1s; }
+    .eq-bar:nth-child(2) { height: 15px; background-color: #ef4444; animation-delay: 0.3s; }
+    .eq-bar:nth-child(3) { height: 9px; background-color: #10b981; animation-delay: 0.2s; }
+    .eq-bar:nth-child(4) { height: 13px; background-color: #f59e0b; animation-delay: 0.4s; }
+
+    @keyframes eqBounce {
+      0%, 100% { height: 4px; }
+      50% { height: 16px; }
+    }
+
+    @media print {
+      body { background: white !important; padding: 0 !important; }
+      .no-print { display: none !important; }
+      #posterContainer { box-shadow: none !important; border-width: 1px !important; margin: 0 !important; max-width: 100% !important; }
+    }
+  </style>
+</head>
+<body class="p-2 sm:p-5 lg:p-7 antialiased flex flex-col items-center">
+
+  <!-- TOP TOOLBAR -->
+  <header class="no-print w-full max-w-6xl bg-white/95 backdrop-blur-md rounded-2xl p-4 mb-5 shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+    
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-sky-400 to-indigo-600 text-white flex items-center justify-center text-xl font-black shadow-md shrink-0">
+        123
+      </div>
+      <div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <h2 class="font-extrabold text-slate-800 text-base">جدول الأرقام التفاعلي (Numbers)</h2>
+          <span class="text-xs font-black bg-rose-100 text-rose-800 px-2.5 py-0.5 rounded-full border border-rose-200 flex items-center gap-1">
+            <span>🇬🇧</span> لكنة بريطانية أنثوية
+          </span>
+          <span class="text-xs font-bold bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+            <span>🌐</span> مترجم بالعربية
+          </span>
+        </div>
+        <p class="text-xs text-slate-500 font-semibold mt-0.5">انقر على أي رقم لسماع نطقه البريطاني ورؤية معناه بالعربية فوراً</p>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center flex-wrap gap-2">
+      <!-- Read All sequentially -->
+      <button onclick="playAllNumbersSequentially()" id="playAllBtn" class="px-4 py-2 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white rounded-xl text-xs font-black shadow-sm transition flex items-center gap-1.5 active:scale-95">
+        <span>▶️</span>
+        <span>قراءة الجدول كاملًا</span>
+      </button>
+
+      <!-- Voice Speed -->
+      <button onclick="toggleVoiceSpeed()" id="speedBtn" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1 active:scale-95">
+        <span>⚡</span>
+        <span id="speedLabel">السرعة: عادية</span>
+      </button>
+
+      <!-- Sample Voice -->
+      <button onclick="testBritishVoice()" class="px-3 py-2 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-xl text-xs font-extrabold transition flex items-center gap-1 active:scale-95">
+        <span>🎙️</span>
+        <span>تجربة الصوت</span>
+      </button>
+
+      <!-- Print -->
+      <button onclick="window.print()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition" title="طباعة الملصق">
+        🖨️
+      </button>
+    </div>
+  </header>
+
+  <!-- NAVIGATION TABS -->
+  <nav class="no-print w-full max-w-6xl flex items-center gap-2 mb-5 overflow-x-auto pb-1">
+    <button onclick="switchTab('poster')" id="tabBtn-poster" class="px-5 py-2.5 rounded-2xl font-black text-sm transition-all shadow-sm flex items-center gap-2 bg-indigo-600 text-white">
+      <span>📊</span>
+      <span>لوحة الأرقام التفاعلية (1 إلى 1000)</span>
+    </button>
+    <button onclick="switchTab('quiz')" id="tabBtn-quiz" class="px-5 py-2.5 rounded-2xl font-black text-sm transition-all shadow-sm flex items-center gap-2 bg-white text-slate-700 hover:bg-slate-100">
+      <span>🎧</span>
+      <span>تحدي الاستماع والتمييز (-teen مقابل -ty)</span>
+    </button>
+    <button onclick="switchTab('builder')" id="tabBtn-builder" class="px-5 py-2.5 rounded-2xl font-black text-sm transition-all shadow-sm flex items-center gap-2 bg-white text-slate-700 hover:bg-slate-100">
+      <span>🧮</span>
+      <span>تمرين العمليات واختيار الكلمة</span>
+    </button>
+  </nav>
+
+  <!-- TAB 1: INTERACTIVE NUMBERS POSTER (Exact Match to Image) -->
+  <main id="tabContent-poster" class="w-full max-w-6xl">
+    <div id="posterContainer" class="bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl p-4 sm:p-7 border-4 border-white/90 relative overflow-hidden">
+      
+      <!-- BACKGROUND FLOATING CARTOON ELEMENTS (MATCHING POSTER) -->
+      <div class="absolute top-2 left-3 math-badge text-2xl opacity-60 select-none">✈️</div>
+      <div class="absolute top-14 left-2 math-badge text-2xl text-pink-500 opacity-60 select-none" style="animation-delay: 1s;">1</div>
+      <div class="absolute top-36 left-2 math-badge text-xl text-emerald-500 opacity-50 select-none" style="animation-delay: 2s;">➗</div>
+      <div class="absolute top-56 left-2 math-badge text-xl text-amber-500 opacity-50 select-none" style="animation-delay: 0.5s;">1</div>
+      <div class="absolute bottom-32 left-2 math-badge text-2xl text-emerald-600 opacity-50 select-none" style="animation-delay: 1.5s;">3</div>
+      <div class="absolute bottom-12 left-3 math-badge text-xl text-purple-500 opacity-60 select-none">📓</div>
+
+      <div class="absolute top-2 right-4 math-badge text-2xl text-green-500 opacity-60 select-none" style="animation-delay: 1s;">3</div>
+      <div class="absolute top-16 right-3 math-badge text-2xl text-purple-500 opacity-60 select-none" style="animation-delay: 2.5s;">4</div>
+      <div class="absolute top-36 right-3 math-badge text-xl text-sky-500 opacity-50 select-none" style="animation-delay: 0.8s;">➗</div>
+      <div class="absolute top-52 right-3 math-badge text-xl text-teal-600 opacity-60 select-none">📓</div>
+      <div class="absolute bottom-32 right-3 math-badge text-2xl text-purple-600 opacity-60 select-none" style="animation-delay: 1.8s;">0</div>
+      <div class="absolute bottom-10 right-3 math-badge text-2xl text-amber-500 opacity-60 select-none" style="animation-delay: 1.2s;">➕</div>
+
+      <!-- POSTER HEADER: Kids Mascots + "Numbers الأرقام" Title -->
+      <div class="flex items-center justify-between pb-4 sm:pb-6 relative border-b border-slate-100 mb-4 px-2 sm:px-6">
+        
+        <!-- Left School Boy & Girl Mascots (SVG) -->
+        <div class="flex items-center gap-1 sm:gap-2">
+          <!-- Cartoon Boy with Backpack & Pencil Wand -->
+          <div class="w-12 h-14 sm:w-16 sm:h-20 shrink-0 cursor-pointer hover:scale-110 transition" onclick="sfx.playCheer(); fireConfetti(0.3)" title="مرحى بالأرقام!">
+            <svg viewBox="0 0 100 120" class="w-full h-full drop-shadow">
+              <!-- Star wand -->
+              <line x1="78" y1="20" x2="68" y2="58" stroke="#ca8a04" stroke-width="3" stroke-linecap="round"/>
+              <polygon points="78,10 82,18 90,20 84,26 86,34 78,29 70,34 72,26 66,20 74,18" fill="#fde047" stroke="#eab308" stroke-width="1.5"/>
+              <!-- Boy Body -->
+              <rect x="36" y="65" width="28" height="30" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+              <!-- Blue Tie / Suspenders -->
+              <path d="M48 65 L52 65 L54 78 L50 84 L46 78 Z" fill="#0284c7"/>
+              <!-- Blue shorts -->
+              <rect x="36" y="94" width="28" height="14" rx="3" fill="#0369a1"/>
+              <!-- Legs -->
+              <line x1="44" y1="108" x2="44" y2="118" stroke="#fed7aa" stroke-width="6" stroke-linecap="round"/>
+              <line x1="56" y1="108" x2="56" y2="118" stroke="#fed7aa" stroke-width="6" stroke-linecap="round"/>
+              <!-- Boy Head -->
+              <circle cx="50" cy="42" r="22" fill="#fed7aa"/>
+              <!-- Hair -->
+              <path d="M28 40 C28 20, 72 20, 72 40 C68 32, 60 30, 50 32 C40 30, 32 32, 28 40 Z" fill="#78350f"/>
+              <!-- Face -->
+              <circle cx="43" cy="42" r="3.2" fill="#1e293b"/>
+              <circle cx="57" cy="42" r="3.2" fill="#1e293b"/>
+              <path d="M46 51 Q50 56 54 51" stroke="#b45309" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+              <ellipse cx="37" cy="46" rx="3.5" ry="2" fill="#fda4af"/>
+              <ellipse cx="63" cy="46" rx="3.5" ry="2" fill="#fda4af"/>
+            </svg>
+          </div>
+          <!-- Cartoon Schoolgirl with Star -->
+          <div class="w-12 h-14 sm:w-16 sm:h-20 shrink-0 cursor-pointer hover:scale-110 transition hidden sm:block" onclick="sfx.playCheer(); fireConfetti(0.3)" title="شطار الأرقام!">
+            <svg viewBox="0 0 100 120" class="w-full h-full drop-shadow">
+              <line x1="22" y1="20" x2="32" y2="58" stroke="#ca8a04" stroke-width="3" stroke-linecap="round"/>
+              <polygon points="22,10 26,18 34,20 28,26 30,34 22,29 14,34 16,26 10,20 18,18" fill="#fde047" stroke="#eab308" stroke-width="1.5"/>
+              <rect x="36" y="65" width="28" height="28" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+              <polygon points="32,92 68,92 64,106 36,106" fill="#0284c7"/>
+              <line x1="44" y1="106" x2="44" y2="118" stroke="#fed7aa" stroke-width="5" stroke-linecap="round"/>
+              <line x1="56" y1="106" x2="56" y2="118" stroke="#fed7aa" stroke-width="5" stroke-linecap="round"/>
+              <circle cx="50" cy="42" r="22" fill="#fed7aa"/>
+              <!-- Girl Hair pigtails -->
+              <ellipse cx="28" cy="44" rx="8" ry="12" fill="#92400e"/>
+              <ellipse cx="72" cy="44" rx="8" ry="12" fill="#92400e"/>
+              <path d="M28 42 C28 20, 72 20, 72 42 C66 32, 58 32, 50 34 C42 32, 34 32, 28 42 Z" fill="#92400e"/>
+              <circle cx="43" cy="42" r="3" fill="#1e293b"/>
+              <circle cx="57" cy="42" r="3" fill="#1e293b"/>
+              <path d="M46 51 Q50 56 54 51" stroke="#b45309" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+              <ellipse cx="37" cy="46" rx="3.5" ry="2" fill="#fda4af"/>
+              <ellipse cx="63" cy="46" rx="3.5" ry="2" fill="#fda4af"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Center 3D Bubble Title: Numbers الأرقام -->
+        <div class="text-center flex-1 px-2 select-none" dir="ltr">
+          <div class="flex items-center justify-center gap-2 sm:gap-4 flex-wrap">
+            <h1 class="font-english text-4xl sm:text-6xl lg:text-7xl font-black tracking-wide inline-flex items-center" style="filter: drop-shadow(0 4px 0 #cbd5e1);">
+              <span class="text-[#f43f5e]">N</span>
+              <span class="text-[#f59e0b]">u</span>
+              <span class="text-[#10b981]">m</span>
+              <span class="text-[#06b6d4]">b</span>
+              <span class="text-[#3b82f6]">e</span>
+              <span class="text-[#8b5cf6]">r</span>
+              <span class="text-[#ec4899]">s</span>
+            </h1>
+            <span class="text-3xl sm:text-5xl lg:text-6xl font-black text-[#ea580c] tracking-normal" style="filter: drop-shadow(0 3px 0 #fed7aa);">
+              الأرقام
+            </span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-500 font-extrabold mt-1">
+            جدول الوحدات والعشرات والمئات والآلاف مع النطق البريطاني وترجمة المعاني
+          </p>
+        </div>
+
+        <!-- Right School Kids (Mirrored Mascots) -->
+        <div class="flex items-center gap-1 sm:gap-2">
+          <!-- Cartoon Schoolgirl 2 -->
+          <div class="w-12 h-14 sm:w-16 sm:h-20 shrink-0 cursor-pointer hover:scale-110 transition" onclick="sfx.playCheer(); fireConfetti(0.3)" title="هيا نتعلم!">
+            <svg viewBox="0 0 100 120" class="w-full h-full drop-shadow">
+              <line x1="78" y1="20" x2="68" y2="58" stroke="#ca8a04" stroke-width="3" stroke-linecap="round"/>
+              <polygon points="78,10 82,18 90,20 84,26 86,34 78,29 70,34 72,26 66,20 74,18" fill="#fde047" stroke="#eab308" stroke-width="1.5"/>
+              <rect x="36" y="65" width="28" height="28" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+              <polygon points="32,92 68,92 64,106 36,106" fill="#0284c7"/>
+              <line x1="44" y1="106" x2="44" y2="118" stroke="#fed7aa" stroke-width="5" stroke-linecap="round"/>
+              <line x1="56" y1="106" x2="56" y2="118" stroke="#fed7aa" stroke-width="5" stroke-linecap="round"/>
+              <circle cx="50" cy="42" r="22" fill="#fed7aa"/>
+              <ellipse cx="28" cy="44" rx="8" ry="12" fill="#78350f"/>
+              <ellipse cx="72" cy="44" rx="8" ry="12" fill="#78350f"/>
+              <path d="M28 42 C28 20, 72 20, 72 42 C66 32, 58 32, 50 34 C42 32, 34 32, 28 42 Z" fill="#78350f"/>
+              <circle cx="43" cy="42" r="3" fill="#1e293b"/>
+              <circle cx="57" cy="42" r="3" fill="#1e293b"/>
+              <path d="M46 51 Q50 56 54 51" stroke="#b45309" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+              <ellipse cx="37" cy="46" rx="3.5" ry="2" fill="#fda4af"/>
+              <ellipse cx="63" cy="46" rx="3.5" ry="2" fill="#fda4af"/>
+            </svg>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- MAIN 5-COLUMN POSTER LAYOUT (EXACTLY MATCHING THE IMAGE) -->
+      <!-- Left 4 Columns + Right Tall Vertical Banner for 1000 -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4 my-2" dir="ltr">
+        
+        <!-- ================= COLUMN 1: UNITS 1 to 9 (Sky Blue) ================= -->
+        <div class="md:col-span-3 rounded-3xl bg-[#bae6fd]/50 border-2 border-[#38bdf8]/40 p-2 sm:p-3 flex flex-col justify-between">
+          <div class="flex items-center justify-between pb-2 mb-1 border-b border-sky-200/80 px-2">
+            <span class="text-xs font-black text-sky-800 flex items-center gap-1 font-english">
+              <span>🔵</span> 1 - 9 Units
+            </span>
+            <button onclick="playColumnSequentially(1)" class="text-[11px] font-black bg-sky-500 hover:bg-sky-600 text-white px-2 py-0.5 rounded-lg transition active:scale-95" title="قراءة العمود">
+              ▶ تشغيل
+            </button>
+          </div>
+          <div id="col1-container" class="space-y-1.5 flex-1 flex flex-col justify-between">
+            <!-- Injected by JavaScript (1 to 9) -->
+          </div>
+        </div>
+
+        <!-- ================= COLUMN 2: TEENS 11 to 19 (Soft Green) ================= -->
+        <div class="md:col-span-3 rounded-3xl bg-[#bbf7d0]/50 border-2 border-[#4ade80]/40 p-2 sm:p-3 flex flex-col justify-between">
+          <div class="flex items-center justify-between pb-2 mb-1 border-b border-green-200/80 px-2">
+            <span class="text-xs font-black text-emerald-800 flex items-center gap-1 font-english">
+              <span>🟢</span> 11 - 19 Teens (<span class="text-red-500">teen</span>)
+            </span>
+            <button onclick="playColumnSequentially(2)" class="text-[11px] font-black bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-0.5 rounded-lg transition active:scale-95" title="قراءة العمود">
+              ▶ تشغيل
+            </button>
+          </div>
+          <div id="col2-container" class="space-y-1.5 flex-1 flex flex-col justify-between">
+            <!-- Injected by JavaScript (11 to 19) -->
+          </div>
+        </div>
+
+        <!-- ================= COLUMN 3: TENS 10 to 90 (Soft Yellow) ================= -->
+        <div class="md:col-span-3 rounded-3xl bg-[#fef08a]/50 border-2 border-[#facc15]/40 p-2 sm:p-3 flex flex-col justify-between">
+          <div class="flex items-center justify-between pb-2 mb-1 border-b border-amber-200/80 px-2">
+            <span class="text-xs font-black text-amber-900 flex items-center gap-1 font-english">
+              <span>🟡</span> 10 - 90 Tens (<span class="text-red-500">ty</span>)
+            </span>
+            <button onclick="playColumnSequentially(3)" class="text-[11px] font-black bg-amber-500 hover:bg-amber-600 text-white px-2 py-0.5 rounded-lg transition active:scale-95" title="قراءة العمود">
+              ▶ تشغيل
+            </button>
+          </div>
+          <div id="col3-container" class="space-y-1.5 flex-1 flex flex-col justify-between">
+            <!-- Injected by JavaScript (10 to 90) -->
+          </div>
+        </div>
+
+        <!-- ================= COLUMN 4: HUNDREDS 100 to 900 (Soft Pink) ================= -->
+        <div class="md:col-span-3 rounded-3xl bg-[#fbcfe8]/50 border-2 border-[#f472b6]/40 p-2 sm:p-3 flex flex-col justify-between">
+          <div class="flex items-center justify-between pb-2 mb-1 border-b border-pink-200/80 px-2">
+            <span class="text-xs font-black text-pink-900 flex items-center gap-1 font-english">
+              <span>🌸</span> 100 - 900 Hundreds
+            </span>
+            <button onclick="playColumnSequentially(4)" class="text-[11px] font-black bg-pink-500 hover:bg-pink-600 text-white px-2 py-0.5 rounded-lg transition active:scale-95" title="قراءة العمود">
+              ▶ تشغيل
+            </button>
+          </div>
+          <div id="col4-container" class="space-y-1.5 flex-1 flex flex-col justify-between">
+            <!-- Injected by JavaScript (100 to 900) -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ================= COLUMN 5 / VERTICAL TALL BANNER: 1000 ================= -->
+      <!-- In Mobile: Displayed as prominent horizontal card; in Tablet/Desktop: tall right edge banner matching image -->
+      <div class="mt-4 rounded-3xl overflow-hidden border-2 border-amber-300 shadow-md p-1 bg-gradient-to-r from-cyan-200 via-amber-200 to-pink-200">
+        <div id="card-1000" onclick="handleNumberClick(37)" class="num-row-card w-full bg-white/90 hover:bg-white rounded-[22px] p-3 sm:p-4 flex items-center justify-between gap-4 transition cursor-pointer">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-rose-500 text-white font-black text-xl flex items-center justify-center shadow">
+              1000
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span id="title-1000" class="font-english font-black text-xl sm:text-2xl text-slate-900">
+                  One thousand
+                </span>
+                <span class="text-xs sm:text-sm font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900">
+                  ألف (1000)
+                </span>
+              </div>
+              <p class="text-xs text-slate-500 font-semibold mt-0.5">انقر للاستماع للنطق البريطاني: "One thousand"</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div id="eq-1000" class="eq-wave-box opacity-0 transition-opacity">
+              <span class="eq-bar"></span><span class="eq-bar"></span><span class="eq-bar"></span><span class="eq-bar"></span>
+            </div>
+            <button class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center text-lg shadow hover:bg-amber-600 transition">
+              🔊
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+  <!-- TAB 2: LISTENING QUIZ (-teen vs -ty Challenge) -->
+  <section id="tabContent-quiz" class="hidden w-full max-w-6xl bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl p-5 sm:p-9 border-4 border-white/90">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-6">
+      <div>
+        <h2 class="text-2xl font-black text-slate-800 flex items-center gap-2">
+          <span>🎧</span> تحدي الاستماع الصوتي وتمييز الأرقام
+        </h2>
+        <p class="text-xs text-slate-500 font-bold mt-1">
+          استمع جيداً للنطق البريطاني وفرّق بدقة بين أرقام (<span class="text-red-500 font-black">-teen</span>) وأرقام (<span class="text-red-500 font-black">-ty</span>) والمئات!
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="px-4 py-2 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-2xl font-black text-sm">
+          النقاط: <span id="quizScore">0</span> 🌟
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Question Audio Card -->
+    <div class="bg-indigo-50/70 rounded-3xl p-6 sm:p-8 border-2 border-indigo-100 flex flex-col items-center justify-center text-center mb-6">
+      <button onclick="playQuizPromptAudio()" class="w-24 h-24 bg-gradient-to-tr from-indigo-600 to-sky-500 hover:from-indigo-700 hover:to-sky-600 text-white rounded-full flex items-center justify-center text-4xl shadow-xl hover:scale-105 active:scale-95 transition">
+        🔊
+      </button>
+      <span class="text-xs font-black text-indigo-800 mt-3 bg-white px-4 py-1.5 rounded-full shadow-sm">
+        انقر لإعادة الاستماع للنطق البريطاني 🇬🇧
+      </span>
+      <p id="quizPromptHint" class="text-slate-500 text-sm mt-3 font-extrabold">أي من الأرقام التالية يطابق ما سمعته؟</p>
+    </div>
+
+    <!-- 4 Quiz Choice Cards -->
+    <div id="quizOptionsGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-4" dir="ltr">
+      <!-- Injected via JavaScript -->
+    </div>
+  </section>
+
+  <!-- TAB 3: MATH OPERATIONS & WORD BUILDER -->
+  <section id="tabContent-builder" class="hidden w-full max-w-6xl bg-white rounded-[32px] sm:rounded-[40px] shadow-2xl p-5 sm:p-9 border-4 border-white/90 text-center">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-6 text-right">
+      <div>
+        <h2 class="text-2xl font-black text-slate-800 flex items-center gap-2">
+          <span>🧮</span> تمرين الحساب والكلمات (Math to English Words)
+        </h2>
+        <p class="text-xs text-slate-500 font-bold mt-1">حل العملية الحسابية البسيطة واختر الكلمة الإنجليزية الصحيحة للناتج</p>
+      </div>
+      <div class="text-xs font-black bg-amber-100 text-amber-900 px-3 py-1.5 rounded-xl">
+        التحدي: <span id="builderStep">1</span> / 10
+      </div>
+    </div>
+
+    <!-- Math Question Display -->
+    <div class="max-w-lg mx-auto bg-slate-50 rounded-3xl p-6 sm:p-8 border-2 border-slate-200/90 mb-6 flex flex-col items-center">
+      <div class="text-xs font-black text-slate-400 mb-2">ما هو ناتج العملية التالية بالإنجليزية؟</div>
+      <div id="mathEquation" dir="ltr" class="font-english text-4xl sm:text-5xl font-black text-indigo-900 tracking-wider mb-2 flex items-center justify-center gap-2 select-none" style="direction: ltr !important;">
+        <span>10 + 4 =</span>
+        <span class="text-amber-500">?</span>
+      </div>
+      <div id="mathHintArabic" class="text-base font-extrabold text-slate-600">
+        الناتج: 14 (أربعة عشر)
+      </div>
+    </div>
+
+    <!-- Choice Options -->
+    <div id="builderOptions" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-xl mx-auto" dir="ltr">
+      <!-- Injected via JS -->
+    </div>
+  </section>
+
+  <!-- FLOATING TOAST -->
+  <div id="toastNotification" class="fixed bottom-6 right-6 transform translate-y-28 opacity-0 transition-all duration-300 z-50 bg-slate-900/95 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 border border-white/20 pointer-events-none" dir="ltr">
+    <span id="toastIcon" class="text-2xl">✨</span>
+    <div>
+      <div id="toastTitle" class="font-english font-extrabold text-sm text-amber-300">Numbers</div>
+      <div id="toastMsg" class="font-semibold text-xs text-slate-200">Tap cards to hear pronunciation.</div>
+    </div>
+  </div>
+  <script>
+    /* Full 37-Number Data matching image_6dc41e.jpg */
+    const NUMBERS_DATA = [
+      /* COLUMN 1: UNITS 1 to 9 (Col: 1) */
+      { id: 1, col: 1, num: 1, word: "One", ar: "واحد", formatted: "One 1" },
+      { id: 2, col: 1, num: 2, word: "Two", ar: "اثنان", formatted: "Two 2" },
+      { id: 3, col: 1, num: 3, word: "Three", ar: "ثلاثة", formatted: "Three 3" },
+      { id: 4, col: 1, num: 4, word: "Four", ar: "أربعة", formatted: "Four 4" },
+      { id: 5, col: 1, num: 5, word: "Five", ar: "خمسة", formatted: "Five 5" },
+      { id: 6, col: 1, num: 6, word: "Six", ar: "ستة", formatted: "Six 6" },
+      { id: 7, col: 1, num: 7, word: "seven", ar: "سبعة", formatted: "seven 7" },
+      { id: 8, col: 1, num: 8, word: "eight", ar: "ثمانية", formatted: "eight 8" },
+      { id: 9, col: 1, num: 9, word: "nine", ar: "تسعة", formatted: "nine 9" },
+
+      /* COLUMN 2: TEENS 11 to 19 (Col: 2) -> with 'teen' in red */
+      { id: 10, col: 2, num: 11, word: "eleven", ar: "أحد عشر", formatted: "eleven 11", customHtml: "eleven 11" },
+      { id: 11, col: 2, num: 12, word: "Twelve", ar: "اثنا عشر", formatted: "Twelve 12", customHtml: "Twelve 12" },
+      { id: 12, col: 2, num: 13, word: "Thirteen", ar: "ثلاثة عشر", formatted: "Thirteen 13", customHtml: 'Thir<span class="highlight-red">teen</span> 13' },
+      { id: 13, col: 2, num: 14, word: "Fourteen", ar: "أربعة عشر", formatted: "Fourteen 14", customHtml: 'Four<span class="highlight-red">teen</span> 14' },
+      { id: 14, col: 2, num: 15, word: "Fifteen", ar: "خمسة عشر", formatted: "Fifteen 15", customHtml: 'Fif<span class="highlight-red">teen</span> 15' },
+      { id: 15, col: 2, num: 16, word: "Sixteen", ar: "ستة عشر", formatted: "Sixteen 16", customHtml: 'Six<span class="highlight-red">teen</span> 16' },
+      { id: 16, col: 2, num: 17, word: "seventeen", ar: "سبعة عشر", formatted: "seventeen 17", customHtml: 'seven<span class="highlight-red">teen</span> 17' },
+      { id: 17, col: 2, num: 18, word: "eighteen", ar: "ثمانية عشر", formatted: "eighteen 18", customHtml: 'eigh<span class="highlight-red">teen</span> 18' },
+      { id: 18, col: 2, num: 19, word: "nineteen", ar: "تسعة عشر", formatted: "nineteen 19", customHtml: 'nine<span class="highlight-red">teen</span> 19' },
+
+      /* COLUMN 3: TENS 10 to 90 (Col: 3) -> with 'ty' in red */
+      { id: 19, col: 3, num: 10, word: "ten", ar: "عشرة", formatted: "ten 10", customHtml: "ten 10" },
+      { id: 20, col: 3, num: 20, word: "Twenty", ar: "عشرون", formatted: "Twenty 20", customHtml: 'Twen<span class="highlight-red">ty</span> 20' },
+      { id: 21, col: 3, num: 30, word: "Thirty", ar: "ثلاثون", formatted: "Thirty 30", customHtml: 'Thir<span class="highlight-red">ty</span> 30' },
+      { id: 22, col: 3, num: 40, word: "Forty", ar: "أربعون", formatted: "Forty 40", customHtml: 'For<span class="highlight-red">ty</span> 40' },
+      { id: 23, col: 3, num: 50, word: "Fifty", ar: "خمسون", formatted: "Fifty 50", customHtml: 'Fif<span class="highlight-red">ty</span> 50' },
+      { id: 24, col: 3, num: 60, word: "Sixty", ar: "ستون", formatted: "Sixty 60", customHtml: 'Six<span class="highlight-red">ty</span> 60' },
+      { id: 25, col: 3, num: 70, word: "seventy", ar: "سبعون", formatted: "seventy 70", customHtml: 'seven<span class="highlight-red">ty</span> 70' },
+      { id: 26, col: 3, num: 80, word: "eighty", ar: "ثمانون", formatted: "eighty 80", customHtml: 'eigh<span class="highlight-red">ty</span> 80' },
+      { id: 27, col: 3, num: 90, word: "ninety", ar: "تسعون", formatted: "ninety 90", customHtml: 'nine<span class="highlight-red">ty</span> 90' },
+
+      /* COLUMN 4: HUNDREDS 100 to 900 (Col: 4) */
+      { id: 28, col: 4, num: 100, word: "one hundred", ar: "مائة", formatted: "one hundred 100" },
+      { id: 29, col: 4, num: 200, word: "Two hundred", ar: "مئتان", formatted: "Two hundred 200" },
+      { id: 30, col: 4, num: 300, word: "Three hundred", ar: "ثلاثمائة", formatted: "Three hundred 300" },
+      { id: 31, col: 4, num: 400, word: "Four hundred", ar: "أربعمائة", formatted: "Four hundred 400" },
+      { id: 32, col: 4, num: 500, word: "Five hundred", ar: "خمسمائة", formatted: "Five hundred 500" },
+      { id: 33, col: 4, num: 600, word: "Six hundred", ar: "ستمائة", formatted: "Six hundred 600" },
+      { id: 34, col: 4, num: 700, word: "seven hundred", ar: "سبعمائة", formatted: "seven hundred 700" },
+      { id: 35, col: 4, num: 800, word: "eight hundred", ar: "ثمانمائة", formatted: "eight hundred 800" },
+      { id: 36, col: 4, num: 900, word: "nine hundred", ar: "تسعمائة", formatted: "nine hundred 900" },
+
+      /* COLUMN 5 / BANNER: 1000 */
+      { id: 37, col: 5, num: 1000, word: "One thousand", ar: "ألف", formatted: "One thousand 1000" }
+    ];
+
+    /* Synthesized Audio Effects */
+    class SoundFX {
+      constructor() { this.ctx = null; }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+      }
+      beep(freq, type = 'sine', duration = 0.12, gainVal = 0.15) {
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {}
+      }
+      playPop() { this.beep(520, 'sine', 0.08, 0.12); }
+      playSuccess() {
+        this.beep(523.25, 'triangle', 0.1, 0.2);
+        setTimeout(() => this.beep(659.25, 'triangle', 0.12, 0.2), 85);
+        setTimeout(() => this.beep(783.99, 'triangle', 0.18, 0.25), 170);
+      }
+      playWrong() {
+        this.beep(280, 'sawtooth', 0.14, 0.15);
+        setTimeout(() => this.beep(210, 'sawtooth', 0.18, 0.15), 110);
+      }
+      playCheer() {
+        this.beep(440, 'triangle', 0.1, 0.15);
+        setTimeout(() => this.beep(554.37, 'triangle', 0.1, 0.18), 80);
+        setTimeout(() => this.beep(659.25, 'triangle', 0.25, 0.2), 160);
+      }
+    }
+    const sfx = new SoundFX();
+    /* Speech Synthesis Engine configured strictly for British Female */
+    const speechEngine = {
+      voices: [],
+      rate: 0.9,
+      pitch: 1.05,
+      init() {
+        if ('speechSynthesis' in window) {
+          const load = () => { this.voices = window.speechSynthesis.getVoices(); };
+          load();
+          if (window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = load;
+          }
+        }
+      },
+      getBritishFemaleVoice() {
+        if (!this.voices || this.voices.length === 0) {
+          this.voices = window.speechSynthesis.getVoices();
+        }
+        const ukVoices = this.voices.filter(v =>
+          v.lang === 'en-GB' || v.lang === 'en_GB' || v.lang.toLowerCase().startsWith('en-gb')
+        );
+        const femaleNames = ['female', 'hazel', 'serena', 'susan', 'libby', 'fiona', 'kate', 'victoria', 'martha', 'alice', 'amy', 'clara'];
+        const ukFemale = ukVoices.find(v => femaleNames.some(fn => v.name.toLowerCase().includes(fn)));
+        if (ukFemale) return ukFemale;
+        const googleUk = ukVoices.find(v => v.name.includes('Google UK English Female'));
+        if (googleUk) return googleUk;
+        if (ukVoices.length > 0) return ukVoices[0];
+        return this.voices.find(v => v.lang.startsWith('en')) || null;
+      },
+      speakNumber(item, onFinish) {
+        if (!('speechSynthesis' in window)) {
+          if (onFinish) onFinish();
+          return;
+        }
+        window.speechSynthesis.cancel();
+
+        const utter = new SpeechSynthesisUtterance(item.word);
+        utter.lang = 'en-GB';
+        utter.rate = this.rate;
+        utter.pitch = this.pitch;
+        const voice = this.getBritishFemaleVoice();
+        if (voice) utter.voice = voice;
+
+        // Visual Active Synchronization
+        const cardEl = document.getElementById(`card-${item.id}`);
+        const textEl = document.getElementById(`text-${item.id}`);
+        const eqEl = document.getElementById(`eq-${item.id}`);
+
+        utter.onstart = () => {
+          if (cardEl) cardEl.classList.add('sync-card-active');
+          if (textEl) textEl.classList.add('sync-text-active');
+          if (eqEl) eqEl.classList.remove('opacity-0');
+        };
+
+        const cleanup = () => {
+          if (cardEl) cardEl.classList.remove('sync-card-active');
+          if (textEl) textEl.classList.remove('sync-text-active');
+          if (eqEl) eqEl.classList.add('opacity-0');
+        };
+
+        utter.onend = () => {
+          cleanup();
+          if (onFinish) onFinish();
+        };
+
+        utter.onerror = () => {
+          cleanup();
+          if (onFinish) onFinish();
+        };
+
+        window.speechSynthesis.speak(utter);
+      }
+    };
+
+    /* Render Poster 4 Main Columns */
+    function renderPosterColumns() {
+      for (let c = 1; c <= 4; c++) {
+        const container = document.getElementById(`col${c}-container`);
+        if (!container) continue;
+        container.innerHTML = '';
+
+        const colItems = NUMBERS_DATA.filter(x => x.col === c);
+        colItems.forEach(item => {
+          const rowDiv = document.createElement('div');
+          rowDiv.id = `card-${item.id}`;
+          rowDiv.className = `num-row-card bg-white/95 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between shadow-sm border border-slate-100 hover:border-amber-300`;
+          rowDiv.onclick = () => handleNumberClick(item.id);
+
+          const displayHtml = item.customHtml || item.formatted;
+
+          rowDiv.innerHTML = `
+            <div class="flex items-center gap-2">
+              <span id="text-${item.id}" class="font-english font-black text-base sm:text-lg text-slate-800 tracking-tight">
+                ${displayHtml}
+              </span>
+            </div>
+            
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                ${item.ar}
+              </span>
+              <div id="eq-${item.id}" class="eq-wave-box opacity-0 transition-opacity">
+                <span class="eq-bar"></span><span class="eq-bar"></span><span class="eq-bar"></span>
+              </div>
+            </div>
+          `;
+          container.appendChild(rowDiv);
+        });
+      }
+    }
+
+    /* Single Number Card Click */
+    function handleNumberClick(id) {
+      const item = NUMBERS_DATA.find(x => x.id === id);
+      if (!item) return;
+      sfx.playPop();
+      showToast(item.word, `${item.word} = ${item.ar} (${item.num})`, "🔊");
+      speechEngine.speakNumber(item);
+    }
+
+    /* Autoplay column items */
+    let isColumnPlaying = false;
+    function playColumnSequentially(colNum) {
+      if (isColumnPlaying) return;
+      isColumnPlaying = true;
+      const items = NUMBERS_DATA.filter(x => x.col === colNum);
+      showToast(`Column ${colNum}`, `قراءة عناصر العمود بالترتيب...`, "▶️");
+
+      let idx = 0;
+      function next() {
+        if (idx >= items.length) {
+          isColumnPlaying = false;
+          showToast("Well Done!", `اكتملت قراءة العمود بنجاح! 🌟`, "🎉");
+          return;
+        }
+        const cur = items[idx];
+        const cardEl = document.getElementById(`card-${cur.id}`);
+        if (cardEl) cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        speechEngine.speakNumber(cur, () => {
+          idx++;
+          setTimeout(next, 350);
+        });
+      }
+      next();
+    }
+
+    /* Play all 37 numbers sequentially */
+    let isAllPlaying = false;
+    function playAllNumbersSequentially() {
+      if (isAllPlaying) return;
+      isAllPlaying = true;
+      const btn = document.getElementById('playAllBtn');
+      btn.disabled = true;
+      btn.classList.add('opacity-60');
+      showToast("All Numbers", "تشغيل قراءة الجدول كاملًا من 1 إلى 1000...", "▶️");
+
+      let idx = 0;
+      function next() {
+        if (idx >= NUMBERS_DATA.length) {
+          isAllPlaying = false;
+          btn.disabled = false;
+          btn.classList.remove('opacity-60');
+          showToast("Great Job!", "تمت قراءة كافة الأرقام بنجاح! 🌟", "🎉");
+          fireConfetti(0.7);
+          return;
+        }
+        const cur = NUMBERS_DATA[idx];
+        const cardEl = document.getElementById(`card-${cur.id}`);
+        if (cardEl) cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        speechEngine.speakNumber(cur, () => {
+          idx++;
+          setTimeout(next, 300);
+        });
+      }
+      next();
+    }
+
+    /* Speed Toggle */
+    function toggleVoiceSpeed() {
+      if (speechEngine.rate >= 0.85) {
+        speechEngine.rate = 0.7;
+        document.getElementById('speedLabel').textContent = "السرعة: بطيئة";
+        showToast("Voice Speed", "تم تقليل سرعة النطق لتسهيل الاستماع 🐢", "⚡");
+      } else {
+        speechEngine.rate = 0.9;
+        document.getElementById('speedLabel').textContent = "السرعة: عادية";
+        showToast("Voice Speed", "تم ضبط سرعة النطق على المستوى الطبيعي 🐇", "⚡");
+      }
+    }
+
+    /* Test British Voice Sample */
+    function testBritishVoice() {
+      sfx.playPop();
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance("Welcome! Let's learn English numbers from one to one thousand.");
+        u.lang = 'en-GB';
+        u.rate = speechEngine.rate;
+        u.pitch = speechEngine.pitch;
+        const voice = speechEngine.getBritishFemaleVoice();
+        if (voice) u.voice = voice;
+        window.speechSynthesis.speak(u);
+        showToast("British Accent", "نطق بريطاني أنثوي فصيح 🇬🇧", "🎙️");
+      }
+    }
+    /* Tab Switcher */
+    function switchTab(tabId) {
+      ['poster', 'quiz', 'builder'].forEach(t => {
+        const content = document.getElementById(`tabContent-${t}`);
+        const btn = document.getElementById(`tabBtn-${t}`);
+        if (t === tabId) {
+          content.classList.remove('hidden');
+          btn.classList.add('bg-indigo-600', 'text-white');
+          btn.classList.remove('bg-white', 'text-slate-700', 'hover:bg-slate-100');
+        } else {
+          content.classList.add('hidden');
+          btn.classList.remove('bg-indigo-600', 'text-white');
+          btn.classList.add('bg-white', 'text-slate-700', 'hover:bg-slate-100');
+        }
+      });
+
+      if (tabId === 'quiz') startNewQuizRound();
+      if (tabId === 'builder') startNewBuilderRound();
+    }
+
+    /* QUIZ MODE: Special Focus on -teen vs -ty & Hundreds */
+    let currentQuizTarget = null;
+    let quizScore = 0;
+
+    function startNewQuizRound() {
+      // Pick target intelligently to test confusing pairs like 14 vs 40, 13 vs 30, 15 vs 50, etc.
+      currentQuizTarget = NUMBERS_DATA[Math.floor(Math.random() * NUMBERS_DATA.length)];
+
+      // Pick 3 realistic distractors (prefer same group or teen/ty pairs)
+      let distractors = [];
+      if (currentQuizTarget.col === 2) {
+        // Teen: include corresponding Ty if possible
+        const matchingTy = NUMBERS_DATA.find(x => x.col === 3 && x.word.toLowerCase().startsWith(currentQuizTarget.word.slice(0, 3).toLowerCase()));
+        if (matchingTy) distractors.push(matchingTy);
+      } else if (currentQuizTarget.col === 3) {
+        const matchingTeen = NUMBERS_DATA.find(x => x.col === 2 && x.word.toLowerCase().startsWith(currentQuizTarget.word.slice(0, 3).toLowerCase()));
+        if (matchingTeen) distractors.push(matchingTeen);
+      }
+
+      const rest = NUMBERS_DATA.filter(x => x.id !== currentQuizTarget.id && !distractors.some(d => d.id === x.id))
+                              .sort(() => 0.5 - Math.random());
+      
+      while (distractors.length < 3) {
+        distractors.push(rest.pop());
+      }
+
+      const options = [currentQuizTarget, ...distractors].sort(() => 0.5 - Math.random());
+
+      const grid = document.getElementById('quizOptionsGrid');
+      grid.innerHTML = '';
+
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = `p-4 sm:p-5 rounded-2xl bg-white border-2 border-slate-200 hover:border-indigo-400 shadow-sm hover:shadow-md transition flex flex-col items-center justify-center text-center transform hover:-translate-y-1 active:scale-95`;
+        btn.onclick = () => checkQuizChoice(opt, btn);
+
+        btn.innerHTML = `
+          <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-700 font-english font-black text-xl flex items-center justify-center mb-2 shadow-inner">
+            ${opt.num}
+          </div>
+          <span class="font-english font-black text-lg text-slate-800">${opt.word}</span>
+          <span class="text-xs font-bold text-slate-500 mt-0.5">${opt.ar}</span>
+        `;
+        grid.appendChild(btn);
+      });
+
+      setTimeout(playQuizPromptAudio, 300);
+    }
+
+    function playQuizPromptAudio() {
+      if (!currentQuizTarget) return;
+      sfx.playPop();
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(currentQuizTarget.word);
+        u.lang = 'en-GB';
+        u.rate = speechEngine.rate;
+        const voice = speechEngine.getBritishFemaleVoice();
+        if (voice) u.voice = voice;
+        window.speechSynthesis.speak(u);
+      }
+    }
+
+    function checkQuizChoice(selected, btnElement) {
+      if (selected.id === currentQuizTarget.id) {
+        sfx.playSuccess();
+        fireConfetti(0.5);
+        quizScore += 10;
+        document.getElementById('quizScore').textContent = quizScore;
+        btnElement.classList.add('ring-4', 'ring-emerald-400', 'bg-emerald-50');
+        showToast("إجابة صحيحة! 🌟", `أحسنت! الرقم هو ${selected.word} (${selected.ar})`, "🎉");
+        setTimeout(startNewQuizRound, 1200);
+      } else {
+        sfx.playWrong();
+        btnElement.classList.add('ring-4', 'ring-rose-400', 'bg-rose-50');
+        showToast("حاول مجدداً", "استمع بدقة للرقم المنطوق واختر الخيار الصحيح", "❌");
+        setTimeout(() => {
+          btnElement.classList.remove('ring-4', 'ring-rose-400', 'bg-rose-50');
+          playQuizPromptAudio();
+        }, 800);
+      }
+    }
+
+    /* BUILDER / MATH CHALLENGE DATA */
+    const MATH_QUESTIONS = [
+      { q: "10 + 4", num: 14, word: "Fourteen", ar: "أربعة عشر (14)", fake: ["Forty", "Four", "Four hundred"] },
+      { q: "10 × 5", num: 50, word: "Fifty", ar: "خمسون (50)", fake: ["Fifteen", "Five", "Five hundred"] },
+      { q: "100 × 3", num: 300, word: "Three hundred", ar: "ثلاثمائة (300)", fake: ["Thirty", "Thirteen", "Three"] },
+      { q: "10 + 6", num: 16, word: "Sixteen", ar: "ستة عشر (16)", fake: ["Sixty", "Six", "Six hundred"] },
+      { q: "20 × 4", num: 80, word: "eighty", ar: "ثمانون (80)", fake: ["eighteen", "eight", "eight hundred"] },
+      { q: "500 + 500", num: 1000, word: "One thousand", ar: "ألف (1000)", fake: ["One hundred", "ten", "ninety"] },
+      { q: "10 + 3", num: 13, word: "Thirteen", ar: "ثلاثة عشر (13)", fake: ["Thirty", "Three hundred", "Three"] },
+      { q: "10 × 7", num: 70, word: "seventy", ar: "سبعون (70)", fake: ["seventeen", "seven", "seven hundred"] },
+      { q: "100 × 9", num: 900, word: "nine hundred", ar: "تسعمائة (900)", fake: ["ninety", "nineteen", "nine"] },
+      { q: "10 + 2", num: 12, word: "Twelve", ar: "اثنا عشر (12)", fake: ["Twenty", "Two", "Two hundred"] }
+    ];
+
+    let builderIdx = 0;
+    function startNewBuilderRound() {
+      const cur = MATH_QUESTIONS[builderIdx % MATH_QUESTIONS.length];
+      document.getElementById('builderStep').textContent = (builderIdx % MATH_QUESTIONS.length) + 1;
+      
+      // Render equation with LTR flow so the question mark ? is strictly placed on the right
+      const eqContainer = document.getElementById('mathEquation');
+      eqContainer.innerHTML = `<span>${cur.q} =</span><span class="text-amber-500 font-black">?</span>`;
+      
+      document.getElementById('mathHintArabic').textContent = `الناتج: ${cur.ar}`;
+
+      const options = [cur.word, ...cur.fake].sort(() => 0.5 - Math.random());
+      const container = document.getElementById('builderOptions');
+      container.innerHTML = '';
+
+      options.forEach(optWord => {
+        const btn = document.createElement('button');
+        btn.className = "p-4 bg-white hover:bg-indigo-50 border-2 border-slate-300 hover:border-indigo-500 rounded-2xl font-english font-black text-xl text-slate-800 shadow-sm active:scale-95 transition flex items-center justify-between";
+        btn.innerHTML = `
+          <span>${optWord}</span>
+          <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-lg">اختيار</span>
+        `;
+        btn.onclick = () => checkBuilderChoice(optWord, cur);
+        container.appendChild(btn);
+      });
+    }
+
+    function checkBuilderChoice(chosen, qObj) {
+      if (chosen.toLowerCase() === qObj.word.toLowerCase()) {
+        sfx.playSuccess();
+        fireConfetti(0.4);
+        if ('speechSynthesis' in window) {
+          const u = new SpeechSynthesisUtterance(qObj.word);
+          u.lang = 'en-GB';
+          const v = speechEngine.getBritishFemaleVoice();
+          if (v) u.voice = v;
+          window.speechSynthesis.speak(u);
+        }
+        showToast("ممتاز جداً! 🌟", `الناتج الصحيح هو ${qObj.word} (${qObj.ar})`, "🎉");
+        setTimeout(() => {
+          builderIdx++;
+          startNewBuilderRound();
+        }, 1200);
+      } else {
+        sfx.playWrong();
+        showToast("حاول مجدداً", `انتبه للفرق بين -teen و -ty والمئات!`, "❌");
+      }
+    }
+
+    function showToast(title, message, icon = "✨") {
+      const toast = document.getElementById('toastNotification');
+      document.getElementById('toastTitle').textContent = title;
+      document.getElementById('toastMsg').textContent = message;
+      document.getElementById('toastIcon').textContent = icon;
+
+      toast.classList.remove('translate-y-28', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      clearTimeout(toast._timeout);
+      toast._timeout = setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-28', 'opacity-0');
+      }, 2300);
+    }
+
+    function fireConfetti(power = 0.5) {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: Math.floor(60 * power),
+          spread: 70,
+          origin: { y: 0.7 }
+        });
+      }
+    }
+
+    /* Bootloader */
+    window.onload = function() {
+      speechEngine.init();
+      renderPosterColumns();
+      setTimeout(() => {
+        showToast("Numbers الأرقام", "انقر على أي رقم لسماع النطق البريطاني وترجمته فوراً 🎙️", "🇬🇧");
+      }, 600);
+    };
+  </script>
+</body>
+</html>
